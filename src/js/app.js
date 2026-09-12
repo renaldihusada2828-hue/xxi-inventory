@@ -219,12 +219,46 @@ function renderStokInfo(p) {
 // ============================================================
 // TYPE & MODE
 // ============================================================
+// ============================================================
+// SIDEBAR NAV SYNC
+// ============================================================
+
+window.switchNav = function(nav) {
+  // Update sidebar active state
+  ['penambahan','pengurangan','riwayat','stok'].forEach(n => {
+    document.getElementById(`nav-${n}`)?.classList.toggle('active', n === nav);
+  });
+
+  if (nav === 'penambahan' || nav === 'pengurangan') {
+    const type = nav === 'penambahan' ? 'PENAMBAHAN' : 'PENGURANGAN';
+    setType(type);
+    // Make sure form is visible (it always is in this layout)
+  } else if (nav === 'riwayat') {
+    switchTab('log');
+  } else if (nav === 'stok') {
+    switchTab('stok');
+  }
+};
+
 window.setType = (type) => {
   currentType  = type;
   const isAdd  = type === 'PENAMBAHAN';
 
-  document.getElementById('btn-add').className    = 'toggle-btn' + (isAdd  ? ' active-add'   : '');
-  document.getElementById('btn-reduce').className = 'toggle-btn' + (!isAdd ? ' active-reduce' : '');
+  // Update form header icon, title, desc
+  const icon  = document.getElementById('form-icon');
+  const title = document.getElementById('form-title');
+  const desc  = document.getElementById('form-desc');
+  const btn   = document.getElementById('btn-submit');
+
+  if (icon) {
+    icon.className = 'form-header-icon ' + (isAdd ? 'icon-add' : 'icon-reduce');
+    icon.innerHTML = isAdd
+      ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`
+      : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
+  }
+  if (title) title.textContent = isAdd ? 'Penambahan Stok' : 'Pengurangan Stok';
+  if (desc)  desc.textContent  = isAdd ? 'Tambah jumlah produk ke dalam gudang' : 'Kurangi jumlah produk dari gudang';
+
   document.getElementById('mode-section').style.display = isAdd ? 'block' : 'none';
 
   if (!isAdd) {
@@ -236,9 +270,14 @@ window.setType = (type) => {
   }
 
   document.getElementById('exp-box').style.display = isAdd ? 'block' : 'none';
-  const btn    = document.getElementById('btn-submit');
-  btn.textContent = isAdd ? 'Simpan Penambahan' : 'Simpan Pengurangan';
-  btn.className   = 'btn-submit ' + (isAdd ? 'add' : 'reduce');
+
+  if (btn) {
+    btn.className = 'btn-submit ' + (isAdd ? 'btn-add' : 'btn-reduce');
+    btn.innerHTML = isAdd
+      ? `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Simpan Penambahan`
+      : `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Simpan Pengurangan`;
+  }
+
   clearProduk();
 };
 
@@ -479,12 +518,27 @@ window.switchTab = function(tab) {
   // Update tab buttons
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById(`tab-${tab}`)?.classList.add('active');
+  document.getElementById(`tab-${tab}-panel`)?.classList.add('active'); // fallback
 
   // Show/hide panes
   ['expired', 'log', 'stok'].forEach(t => {
     const pane = document.getElementById(`pane-${t}`);
     if (pane) pane.style.display = t === tab ? 'block' : 'none';
   });
+
+  // Show/hide toolbar search (only for stok)
+  const srch    = document.getElementById('toolbar-search');
+  const filters = document.getElementById('toolbar-filters');
+  if (srch)    srch.style.display    = tab === 'stok' ? 'flex' : 'none';
+  if (filters) filters.style.display = tab === 'stok' ? 'flex' : 'none';
+
+  // Sync sidebar nav
+  const navMap = { expired: 'penambahan', log: 'riwayat', stok: 'stok' };
+  ['penambahan','pengurangan','riwayat','stok'].forEach(n => {
+    document.getElementById(`nav-${n}`)?.classList.remove('active');
+  });
+  const navId = navMap[tab];
+  if (navId) document.getElementById(`nav-${navId}`)?.classList.add('active');
 
   // Load stok on first click
   if (tab === 'stok' && !_stokLoaded) {
