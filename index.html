@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>XXI Inventory — Gudang Transit</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📦</text></svg>" />
+  <link rel="stylesheet" href="/src/css/style.css" />
+</head>
+<body>
+
+  <!-- ===== TOPBAR ===== -->
+  <header class="topbar">
+    <div class="topbar-brand">
+      <div class="topbar-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+          <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+          <line x1="12" y1="22.08" x2="12" y2="12"/>
+        </svg>
+      </div>
+      <div>
+        <div class="topbar-name">XXI Inventory</div>
+        <div class="topbar-sub" id="sheet-label">Gudang Transit</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-date" id="topbar-date"></div>
+      <div class="topbar-status" id="topbar-status">
+        <span class="status-dot"></span>
+        <span>Terhubung</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== MAIN LAYOUT ===== -->
+  <div class="layout">
+
+    <!-- ========== LEFT: FORM ========== -->
+    <aside class="panel panel-form">
+
+      <!-- TYPE TABS -->
+      <div class="type-tabs">
+        <button class="type-tab active-add" id="btn-add" onclick="setType('PENAMBAHAN')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Penambahan
+        </button>
+        <button class="type-tab" id="btn-reduce" onclick="setType('PENGURANGAN')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Pengurangan
+        </button>
+      </div>
+
+      <!-- FORM BODY -->
+      <div class="form-body">
+
+        <!-- MODE (only for PENAMBAHAN) -->
+        <div id="mode-section">
+          <div class="field-group">
+            <label class="field-label">Tipe Input</label>
+            <div class="seg-control">
+              <button class="seg-btn active" id="btn-harian"   onclick="setMode('HARIAN')">Per Tanggal</button>
+              <button class="seg-btn"        id="btn-mingguan" onclick="setMode('MINGGUAN')">Per Minggu</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- TANGGAL -->
+        <div class="field-group" id="group-tanggal">
+          <label class="field-label" for="sel-tanggal">Tanggal</label>
+          <select class="field-input" id="sel-tanggal"></select>
+        </div>
+
+        <!-- MINGGU -->
+        <div class="field-group" id="group-minggu" style="display:none">
+          <label class="field-label" for="sel-minggu">Minggu ke-</label>
+          <select class="field-input" id="sel-minggu">
+            <option value="1">Minggu 1</option>
+            <option value="2">Minggu 2</option>
+            <option value="3">Minggu 3</option>
+            <option value="4">Minggu 4</option>
+          </select>
+        </div>
+
+        <!-- PRODUK -->
+        <div class="field-group">
+          <label class="field-label" for="inp-produk">Nama Produk</label>
+          <div class="autocomplete-wrap">
+            <div class="field-input-icon">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+            </div>
+            <input
+              type="text" id="inp-produk" class="field-input has-icon"
+              placeholder="Cari produk..."
+              autocomplete="off"
+              oninput="onProdukInput()"
+              onfocus="onProdukFocus()"
+              onkeydown="onProdukKeydown(event)"
+            />
+            <div class="ac-dropdown" id="ac-dropdown"></div>
+          </div>
+          <div class="stok-badge" id="stok-info" style="display:none"></div>
+        </div>
+
+        <!-- JUMLAH -->
+        <div class="field-group">
+          <label class="field-label" for="inp-jumlah">Jumlah</label>
+          <input type="number" id="inp-jumlah" class="field-input" placeholder="0" min="1" step="1" />
+        </div>
+
+        <!-- EXP (only PENAMBAHAN) -->
+        <div id="exp-box" class="exp-section">
+          <div class="exp-row">
+            <div class="field-group" style="flex:1;margin-bottom:0">
+              <label class="field-label" for="inp-exp">Tanggal Kadaluarsa (EXP)</label>
+              <input type="date" id="inp-exp" class="field-input" />
+            </div>
+          </div>
+          <label class="check-label">
+            <input type="checkbox" id="chk-no-exp" onchange="toggleExpInput()" />
+            <span>Produk tanpa tanggal EXP</span>
+          </label>
+        </div>
+
+        <!-- SUBMIT -->
+        <button class="btn-submit btn-add" id="btn-submit" onclick="submitTransaksiHandler()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+            <polyline points="17 21 17 13 7 13 7 21"/>
+            <polyline points="7 3 7 8 15 8"/>
+          </svg>
+          Simpan Penambahan
+        </button>
+
+      </div><!-- /form-body -->
+    </aside>
+
+    <!-- ========== RIGHT: DATA PANELS ========== -->
+    <main class="panel-right">
+
+      <!-- EXPIRING PRODUCTS -->
+      <section class="data-card">
+        <div class="data-card-header">
+          <div class="data-card-title">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            Produk Mendekati / Sudah Expired
+          </div>
+          <button class="icon-btn" onclick="loadExpiring()" title="Refresh">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="23 4 23 10 17 10"/>
+              <polyline points="1 20 1 14 7 14"/>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+            </svg>
+          </button>
+        </div>
+        <div class="data-card-body" id="expiring-list">
+          <div class="state-loading">
+            <div class="spinner spinner-sm"></div>
+            <span>Memuat...</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- TRANSACTION LOG -->
+      <section class="data-card">
+        <div class="data-card-header">
+          <div class="data-card-title">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+            Riwayat Transaksi
+          </div>
+          <div class="header-actions">
+            <span class="log-count" id="log-count"></span>
+            <button class="icon-btn" onclick="loadLog()" title="Refresh">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="23 4 23 10 17 10"/>
+                <polyline points="1 20 1 14 7 14"/>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="data-card-body no-pad" id="log-list">
+          <div class="state-loading">
+            <div class="spinner spinner-sm"></div>
+            <span>Memuat...</span>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div><!-- /layout -->
+
+  <!-- SPINNER OVERLAY -->
+  <div class="spinner-wrap" id="spinner">
+    <div class="spinner-overlay-inner">
+      <div class="spinner"></div>
+      <span>Menyimpan...</span>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast-wrap" id="toast-wrap"></div>
+
+  <script type="module" src="/src/js/app.js"></script>
+  <script>
+    // Set tanggal di topbar
+    document.getElementById('topbar-date').textContent =
+      new Date().toLocaleDateString('id-ID', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  </script>
+</body>
+</html>
