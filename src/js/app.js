@@ -3,8 +3,7 @@
 // ============================================================
 
 import { getProducts } from './products.js';
-import { submitTransaksi, getLog, getExpiringProducts } from './transactions.js';
-import {
+import { submitTransaksi, getLog, getExpiringProducts } from './transactions.js';import {
   escHtml, formatDate, formatDateTime,
   highlightMatch, showToast, showSpinner,
 } from './utils.js';
@@ -25,8 +24,9 @@ let currentMode      = 'HARIAN';
 window.addEventListener('DOMContentLoaded', () => {
   buildTanggal();
   loadProducts();
-  loadExpiring();
-  loadLog();  // auto-load, tidak perlu toggle lagi
+  loadExpiring();   // tab expired auto-load
+  loadLog();        // tab log auto-load
+  // tab stok dimuat hanya saat diklik (lihat switchTab)
 
   document.addEventListener('click', (e) => {
     if (
@@ -349,35 +349,44 @@ async function loadExpiring() {
           <div class="state-empty-title">Semua produk masih aman</div>
           <span>Tidak ada produk yang expired dalam 30 hari ke depan.</span>
         </div>`;
+      // Kosongkan badge
+      const badge = document.getElementById('badge-expired');
+      if (badge) badge.textContent = '';
       return;
     }
 
+    // Update badge count
+    const badge = document.getElementById('badge-expired');
+    if (badge) badge.textContent = data.length;
+
   if (el) el.innerHTML = `
-      <table class="exp-table">
-        <thead>
-          <tr>
-            <th>Produk</th>
-            <th>Tgl EXP</th>
-            <th>Qty</th>
-            <th>Sisa Waktu</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${data.map(x => {
-            const cls   = x.daysLeft <= 7  ? 'badge-danger'
-                        : x.daysLeft <= 30 ? 'badge-warn' : 'badge-ok';
-            const label = x.daysLeft < 0  ? 'EXPIRED'
-                        : x.daysLeft === 0 ? 'HARI INI'
-                        : `${x.daysLeft} hari`;
-            return `<tr>
-              <td class="exp-produk">${escHtml(x.produk)}</td>
-              <td>${formatDate(x.expDate)}</td>
-              <td>${x.qty}</td>
-              <td><span class="badge ${cls}">${label}</span></td>
-            </tr>`;
-          }).join('')}
-        </tbody>
-      </table>`;
+      <div class="table-scroll">
+        <table class="exp-table">
+          <thead>
+            <tr>
+              <th>Produk</th>
+              <th>Tgl EXP</th>
+              <th>Qty</th>
+              <th>Sisa Waktu</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.map(x => {
+              const cls   = x.daysLeft <= 7  ? 'badge-danger'
+                          : x.daysLeft <= 30 ? 'badge-warn' : 'badge-ok';
+              const label = x.daysLeft < 0  ? 'EXPIRED'
+                          : x.daysLeft === 0 ? 'HARI INI'
+                          : `${x.daysLeft} hari`;
+              return `<tr>
+                <td class="exp-produk">${escHtml(x.produk)}</td>
+                <td>${formatDate(x.expDate)}</td>
+                <td>${x.qty}</td>
+                <td><span class="badge ${cls}">${label}</span></td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>`;
   } catch (e) {
     if (el) el.innerHTML = `<div class="state-empty"><div class="state-empty-title">Gagal memuat data EXP</div></div>`;
   }
@@ -415,36 +424,38 @@ async function loadLog() {
     if (countEl) countEl.textContent = `${res.data.length} transaksi`;
 
     listEl.innerHTML = `
-      <table class="log-table">
-        <thead>
-          <tr>
-            <th>Waktu</th>
-            <th>Produk</th>
-            <th>Jumlah</th>
-            <th>Sisa</th>
-            <th>Ref</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${res.data.map(t => {
-            const sisa = t.sisa_stok_setelah === null || t.sisa_stok_setelah === undefined ? '-' : t.sisa_stok_setelah;
-            return `<tr>
-              <td style="color:var(--n400);white-space:nowrap;font-size:.75rem">${formatDateTime(t.created_at)}</td>
-              <td>
-                <div class="log-produk-name">${escHtml(t.produk)}</div>
-                ${t.exp_date ? `<div class="exp-chip">EXP: ${formatDate(t.exp_date)}</div>` : ''}
-              </td>
-              <td>
-                <span class="${t.tipe === 'PENAMBAHAN' ? 'pill-add' : 'pill-reduce'}">
-                  ${t.tipe === 'PENAMBAHAN' ? '+' : '−'}${t.jumlah}
-                </span>
-              </td>
-              <td><span class="sisa-chip">${escHtml(String(sisa))}</span></td>
-              <td style="color:var(--n400);font-size:.75rem">${escHtml(t.ref || '')}</td>
-            </tr>`;
-          }).join('')}
-        </tbody>
-      </table>`;
+      <div class="table-scroll">
+        <table class="log-table">
+          <thead>
+            <tr>
+              <th>Waktu</th>
+              <th>Produk</th>
+              <th>Jumlah</th>
+              <th>Sisa</th>
+              <th>Ref</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${res.data.map(t => {
+              const sisa = t.sisa_stok_setelah === null || t.sisa_stok_setelah === undefined ? '-' : t.sisa_stok_setelah;
+              return `<tr>
+                <td style="color:var(--n400);white-space:nowrap;font-size:.75rem">${formatDateTime(t.created_at)}</td>
+                <td>
+                  <div class="log-produk-name">${escHtml(t.produk)}</div>
+                  ${t.exp_date ? `<div class="exp-chip">EXP: ${formatDate(t.exp_date)}</div>` : ''}
+                </td>
+                <td>
+                  <span class="${t.tipe === 'PENAMBAHAN' ? 'pill-add' : 'pill-reduce'}">
+                    ${t.tipe === 'PENAMBAHAN' ? '+' : '−'}${t.jumlah}
+                  </span>
+                </td>
+                <td><span class="sisa-chip">${escHtml(String(sisa))}</span></td>
+                <td style="color:var(--n400);font-size:.75rem">${escHtml(t.ref || '')}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>`;
 
     if (sec) sec.dataset.loaded = '1';
   } catch (e) {
@@ -453,3 +464,154 @@ async function loadLog() {
 }
 
 window.loadLog = loadLog;
+
+// ============================================================
+// TAB SYSTEM
+// ============================================================
+
+let _activeTab    = 'expired';
+let _stokLoaded   = false;
+let _allStokRows  = [];  // cache for filter
+
+window.switchTab = function(tab) {
+  _activeTab = tab;
+
+  // Update tab buttons
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`tab-${tab}`)?.classList.add('active');
+
+  // Show/hide panes
+  ['expired', 'log', 'stok'].forEach(t => {
+    const pane = document.getElementById(`pane-${t}`);
+    if (pane) pane.style.display = t === tab ? 'block' : 'none';
+  });
+
+  // Load stok on first click
+  if (tab === 'stok' && !_stokLoaded) {
+    loadStokTable();
+  }
+};
+
+window.refreshCurrentTab = function() {
+  if (_activeTab === 'expired') loadExpiring();
+  else if (_activeTab === 'log') loadLog();
+  else if (_activeTab === 'stok') { _stokLoaded = false; loadStokTable(); }
+};
+
+// ============================================================
+// STOK TABLE
+// ============================================================
+
+async function loadStokTable() {
+  const el = document.getElementById('stok-list');
+  el.innerHTML = `<div class="state-loading"><div class="spinner spinner-sm"></div><span>Memuat data stok...</span></div>`;
+
+  try {
+    const res = await getProducts(true);  // force refresh
+    if (!res.success) {
+      el.innerHTML = `<div class="state-empty"><div class="state-empty-title">Gagal memuat stok</div><span>${escHtml(res.message)}</span></div>`;
+      return;
+    }
+
+    _allStokRows = res.data;
+    _stokLoaded  = true;
+    renderStokTable(_allStokRows);
+
+  } catch (e) {
+    el.innerHTML = `<div class="state-empty"><div class="state-empty-title">Gagal memuat stok</div><span>${escHtml(e.message)}</span></div>`;
+  }
+}
+
+function getStokCategory(p) {
+  if (p.is_usage)  return 'USAGE';
+  if (p.is_weekly) return 'WEEKLY';
+  return 'LAINNYA';
+}
+
+function renderStokTable(data) {
+  const el      = document.getElementById('stok-list');
+  const countEl = document.getElementById('stok-count');
+  if (countEl) countEl.textContent = `${data.length} produk`;
+
+  if (!data.length) {
+    el.innerHTML = `
+      <div class="state-empty">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <div class="state-empty-title">Tidak ditemukan</div>
+        <span>Coba ubah filter pencarian.</span>
+      </div>`;
+    return;
+  }
+
+  // Hitung max sisa untuk skala bar
+  const maxSisa = Math.max(...data.map(p => p.sisa_stok), 1);
+
+  el.innerHTML = `
+    <div class="table-scroll">
+      <table class="stok-table">
+        <thead>
+          <tr>
+            <th class="stok-no">#</th>
+            <th>Nama Produk</th>
+            <th>Kategori</th>
+            <th>Stok Awal</th>
+            <th>Sisa Stok</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.map((p, i) => {
+            const cat     = getStokCategory(p);
+            const catCls  = cat === 'USAGE' ? 'cat-usage' : cat === 'WEEKLY' ? 'cat-weekly' : 'cat-lainnya';
+            const catLbl  = cat;
+
+            const isEmpty = p.sisa_stok <= 0;
+            const isLow   = !isEmpty && p.sisa_stok <= 5;
+            const numCls  = isEmpty ? 'sisa-empty' : isLow ? 'sisa-low' : 'sisa-ok';
+            const barCls  = isEmpty ? 'sisa-bar-empty' : isLow ? 'sisa-bar-low' : 'sisa-bar-ok';
+            const barPct  = Math.min(100, Math.round((p.sisa_stok / maxSisa) * 100));
+
+            return `<tr>
+              <td class="stok-no">${i + 1}</td>
+              <td class="stok-name">${escHtml(p.produk)}</td>
+              <td><span class="stok-cat ${catCls}">${catLbl}</span></td>
+              <td style="color:var(--n400)">${p.stock_awal}</td>
+              <td>
+                <div class="sisa-num ${numCls}">${p.sisa_stok}</div>
+                <div class="sisa-bar-wrap">
+                  <div class="sisa-bar-fill ${barCls}" style="width:${barPct}%"></div>
+                </div>
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+// ============================================================
+// FILTER STOK TABLE
+// ============================================================
+
+window.filterStokTable = function() {
+  const q       = (document.getElementById('stok-search')?.value || '').trim().toLowerCase();
+  const catF    = document.getElementById('stok-filter-cat')?.value || '';
+  const statusF = document.getElementById('stok-filter-status')?.value || '';
+
+  let data = _allStokRows.slice();
+
+  if (q) {
+    data = data.filter(p => p.produk.toLowerCase().includes(q));
+  }
+  if (catF) {
+    data = data.filter(p => getStokCategory(p) === catF);
+  }
+  if (statusF === 'low') {
+    data = data.filter(p => p.sisa_stok > 0 && p.sisa_stok <= 5);
+  } else if (statusF === 'empty') {
+    data = data.filter(p => p.sisa_stok <= 0);
+  }
+
+  renderStokTable(data);
+};
